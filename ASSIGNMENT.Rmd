@@ -1,0 +1,413 @@
+---
+title: "Decessi covid 19"
+author: "Lorenzo Sasso 809055"
+date: "2/5/2020"
+output:
+  word_document: default
+  html_document: default
+---
+L'analisi nasce con l'intenzione di rispondere alle seguenti domande:
+-Quanti decessi ci sono stati nel 2020 tra Gennaio e Marzo?
+-Quanti tra questi sono dovuti al covid?
+Per fare ciò sono stati utilizzati i dati Istat relativi ai morti dei comuni italiani dal 2015 al 2020. 
+L'analisi in questione si concentra soltanto sulla regione Lombardia. Abbiamo disponibili per il mese di Gennaio negli anni dal 2015 al 2019 i dati relativi a 1482 comuni, per febbraio 1473 e per marzo 1484. Considerandoli congiuntamente abbiamo a disposizione almeno una rilevazione nei tre mesi per 1503 comuni (su circa 1506 totali). Per i comuni che non hanno una rilevazione in tutti 3 i mesi si è riscontrata una popolazione molto bassa (circa 400/500 abitanti) e un conseguente numero di decessi prossimo allo zero. Per il 2020 invece abbiamo a disposizione i dati di 622 comuni lombardi.
+Per rispondere ad entrambe le domande l'obiettivo è stato quello di stimare i decessi del 2020 nei mesi di Gennaio, Febbraio, Marzo per i comuni i cui dati non erano disponibili.
+Per fare ciò sono stati considerati separatamente i tre mesi. 
+Per quanto riguarda Gennaio si è verificato, tramite un test statistico, se nei 622 comuni la media dei decessi  negli anni 2015-2019 fosse significativamente diversa dai decessi nello stesso mese del 2020.
+In nessun comune si è verificata una differenza significativa, quindi abbiamo deciso di assegnare come numero di decessi per il mese di Gennaio nel resto dei comuni lombardi la media dei decessi negli anni precedenti dello stesso mese dell'anno. 
+La stessa operazione è stata effettuata per il mese di Febbraio e la situazione è risultata essere simile, anche se una parte di comuni ha avuto un incremento o decremento significativo del numero di morti. Tra i 622 comuni è stata calcolata la percentuale di quanti hanno avuto un incremento o decremento oppure una differenza non significativa. 
+Questa percentuale è stata utilizzata come probabilità per assegnare casualmente ai comuni i cui dati non erano disponibili la possibilità di aver avuto un incremento, un decremento oppure che il numero di decessi fosse uguale alla media di Febbraio degli anni precedenti.
+Per quanto riguarda il mese di Marzo si è deciso di agire diversamente; è stata calcolata la somma dei decessi per ogni comune e poi è stato calcolato l'incremento percentuale rispetto alla media dei decessi nel mese di Marzo negl anni passati (2015-2019).
+A questo punto i comuni sono stati raggruppati per provincia ed è stato calcolato l'incremento medio di decessi per ognuna di queste.
+E' stato supposto che l'incremento per i restanti comuni si aggirasse intorno ad un intervallo [0,20]%.
+Per ogni comune è stata assegnata in modo casuale una percentuale di incremento sulla base della media (ricalcolata in un intervallo [0,20]) e della deviazione standard dell'incremento medio del numero di decessi della provincia di appartenenza.
+Ad esempio, avendo constatato che Bergamo è stata la provincia con un incremento medio maggiore rispetto alle altre province, ai comuni della provincia di Bergamo è stato assegnato un incremento casuale più vicino al 20% rispetto a comuni, come quelli in provincia di Como, dove l'incremento medio è stato nettamente inferiore.
+Dopo aver calcolato i dati per i primi 3 mesi del 2020, in tutti i comuni lombardi, è stato calcolato un intervallo del numero totale di decessi: [38300,40700] mentre la media di decessi negli anni passati è risultata essere 27 750.
+Per calcolare invece il numero di decessi Covid-19 abbiamo sottratto al numero di decessi nel mese di Marzo 2020 la mediana dei decessi di Marzo negli anni dal 2015 al 2019. In questo caso L'intervallo è risultato essere[11 900,13 200]
+```{r}
+library(dplyr)   
+library(tidyr)   
+library(ggplot2) 
+library(plotly)  
+
+dt <- read.csv("C:\\Users\\hp\\Desktop\\università\\4° anno\\dsLAB\\assignmentCovid\\dati-giornalieri-comune-16aprile\\dati-giornalieri-comune\\comune_giorno.csv")
+
+
+td <- dt %>%
+  gather(key = "SESSO_ANNO", value = "DECESSI", MASCHI_15:TOTALE_20)
+
+
+# Spezziamo la variabile SESSO_ANNO nelle variabili SESSO ANNO
+td %>% separate(SESSO_ANNO, c("SESSO", "ANNO"), "_") -> td
+
+# trasformiamo in data la variabile GE che ha il formato mese mese anno anno
+td %>% mutate(DATA = as.Date(paste0("0", GE, "2020"), format = "%m%d%Y")) -> td
+td["MESE"] <- format(td$DATA,"%m")
+#creo un df che mi servirà dopo
+decessi_2020_completo <- td
+
+#creiamo dataframe per ogni anno togliendo le righe dove non sono presenti
+td %>% filter(DECESSI < 9999, SESSO =="MASCHI" |SESSO=="FEMMINE") -> td
+td %>% group_by(ANNO, MESE,NOME_REGIONE, NOME_COMUNE) %>%
+  summarise(sum(DECESSI)) ->td1
+
+td$MESE <- as.numeric(as.character(td$MESE))
+td1$MESE <- as.numeric(as.character(td1$MESE))
+td1 %>% filter(NOME_REGIONE == "Lombardia",
+               ANNO == "15",
+              MESE < 4) -> decessi_comune_15
+
+td1 %>% filter(NOME_REGIONE == "Lombardia",
+               ANNO == "16",
+              MESE < 4) -> decessi_comune_16
+
+td1 %>% filter(NOME_REGIONE == "Lombardia",
+               ANNO == "17",
+              MESE < 4) -> decessi_comune_17
+
+td1 %>% filter(NOME_REGIONE == "Lombardia",
+               ANNO == "18",
+              MESE < 4) -> decessi_comune_18
+
+td1 %>% filter(NOME_REGIONE == "Lombardia",
+               ANNO == "19",
+              MESE < 4) -> decessi_comune_19 
+
+td1 %>% filter(NOME_REGIONE == "Lombardia",
+               ANNO == "20",
+              MESE < 4) -> decessi_comune_20 
+
+
+
+
+
+
+```
+
+
+```{r}
+#creiamo le tabelle con ogni mese per ogni anno
+decessi_comune_15 %>% filter(MESE==1) -> gennaio_15
+decessi_comune_15 %>% filter(MESE==2) -> febbraio_15
+decessi_comune_15 %>% filter(MESE==3) -> marzo_15
+
+
+decessi_comune_16 %>% filter(MESE==1) -> gennaio_16
+decessi_comune_16 %>% filter(MESE==2) -> febbraio_16
+decessi_comune_16 %>% filter(MESE==3) -> marzo_16
+
+decessi_comune_17 %>% filter(MESE==1) -> gennaio_17
+decessi_comune_17 %>% filter(MESE==2) -> febbraio_17
+decessi_comune_17 %>% filter(MESE==3) -> marzo_17
+
+decessi_comune_18 %>% filter(MESE==1) -> gennaio_18
+decessi_comune_18 %>% filter(MESE==2) -> febbraio_18
+decessi_comune_18 %>% filter(MESE==3) -> marzo_18
+
+decessi_comune_19 %>% filter(MESE==1) -> gennaio_19
+decessi_comune_19 %>% filter(MESE==2) -> febbraio_19
+decessi_comune_19 %>% filter(MESE==3) -> marzo_19
+
+decessi_comune_20 %>% filter(MESE==1) -> gennaio_20
+decessi_comune_20 %>% filter(MESE==2) -> febbraio_20
+decessi_comune_20 %>% filter(MESE==3) -> marzo_20
+
+
+```
+
+```{r}
+#Rinomino colonne in tabelle
+colnames(gennaio_15)[5] <- c("Decessi_Gennaio_15")
+colnames(febbraio_15)[5] <- c("Decessi_Febbraio_15")
+colnames(marzo_15)[5] <- c("Decessi_Marzo_15")
+
+
+colnames(gennaio_16)[5] <- c("Decessi_Gennaio_16")
+colnames(febbraio_16)[5] <- c("Decessi_Febbraio_16")
+colnames(marzo_16)[5] <- c("Decessi_Marzo_16")
+
+
+colnames(gennaio_17)[5] <- c("Decessi_Gennaio_17")
+colnames(febbraio_17)[5] <- c("Decessi_Febbraio_17")
+colnames(marzo_17)[5] <- c("Decessi_Marzo_17")
+
+colnames(gennaio_18)[5] <- c("Decessi_Gennaio_18")
+colnames(febbraio_18)[5] <- c("Decessi_Febbraio_18")
+colnames(marzo_18)[5] <- c("Decessi_Marzo_18")
+
+colnames(gennaio_19)[5] <- c("Decessi_Gennaio_19")
+colnames(febbraio_19)[5] <- c("Decessi_Febbraio_19")
+colnames(marzo_19)[5] <- c("Decessi_Marzo_19")
+
+#creo una tabella per ogni mese(Gennaio- febbraio-marzo) dei decessi in ogni comune 
+gennaio <- gennaio_15[, c("NOME_COMUNE","Decessi_Gennaio_15")]
+gennaio["Decessi_Gennaio_16"] <- gennaio_16[,"Decessi_Gennaio_16"]
+gennaio["Decessi_Gennaio_17"] <- gennaio_17[,"Decessi_Gennaio_17"]
+gennaio["Decessi_Gennaio_118"] <- gennaio_18[,"Decessi_Gennaio_18"]
+gennaio["Decessi_Gennaio_19"] <- gennaio_19[,"Decessi_Gennaio_19"]
+
+febbraio <- febbraio_15[, c("NOME_COMUNE","Decessi_Febbraio_15")]
+febbraio["Decessi_Febbraio_16"] <- febbraio_16[,"Decessi_Febbraio_16"]
+febbraio["Decessi_Febbraio_17"] <- febbraio_17[,"Decessi_Febbraio_17"]
+febbraio["Decessi_Febbraio_18"] <- febbraio_18[,"Decessi_Febbraio_18"]
+febbraio["Decessi_Febbraio_19"] <- febbraio_19[,"Decessi_Febbraio_19"]
+
+marzo <- marzo_15[, c("NOME_COMUNE","Decessi_Marzo_15")]
+marzo["Decessi_Marzo_16"] <- marzo_16[,"Decessi_Marzo_16"]
+marzo["Decessi_Marzo_17"] <- marzo_17[,"Decessi_Marzo_17"]
+marzo["Decessi_Marzo_18"] <- marzo_18[,"Decessi_Marzo_18"]
+marzo["Decessi_Marzo_19"] <- marzo_19[,"Decessi_Marzo_19"]
+```
+
+
+
+```{r}
+#Calcolo la media dei decessi di ogni mese per gli anni 15-19
+gennaio['mediaDecessiGennaio'] <-rowMeans(gennaio[,2:6])
+febbraio['mediaDecessiFebbraio'] <-rowMeans(febbraio[,2:6])
+marzo['mediaDecessiMarzo'] <-rowMeans(marzo[,2:6])
+#mediana di Marzo 15-19
+marzo['medianaDecessiMarzo'] <- apply(marzo[,2:6],1, median)
+
+
+#GENNAIO
+
+#Creiamo un'unica tabella per gennaio per i comuni di cui sono disponibili i dati del 2020 e calcoliamo il p value per vedere se vi è una differenza significativa tra la media dei decessi di gennaio dal 2015 al 2019 e i decessi di gennaio del 2020. Questo test ci permette di verificare se è possibile assegnare un valore uguale alla media dei decessi di gennaio 2020 per quei comuni per i quali non abbiamo i dati.
+joinGennaio <- merge(x = gennaio, y = gennaio_20, by="NOME_COMUNE")
+vector <-c()
+i<-1
+for (i in 1:nrow(joinGennaio)){
+  p <- try(t.test(joinGennaio[i,2:6], joinGennaio[i,c(2:6,11)])$p.value)
+  vector <- append(vector, p)
+  
+}
+joinGennaio['p-value'] <- vector
+
+#Estraiamo i comuni di cui non abbiamo i dati del 2020
+gennaio_no2020 <- left_join(gennaio, gennaio_20, by="NOME_COMUNE")
+gennaio_no2020 %>% filter(is.na(NOME_REGIONE)) -> gennaio_no2020
+#Nessun p value porta al rifiuto dell'ipotesi nulla e quindi assegnamo alla variabile decessi del 2020 la media dei decessi di gennaio degli anni precedenti
+gennaio_no2020['Decessi_Gennaio_20'] <- gennaio_no2020$mediaDecessiGennaio
+
+#Elimino, estraggo e rinonimo le colonne
+gennaio_no2020 %>% select(- c(2:11)) -> gennaio_no2020_finale
+as.data.frame(gennaio_20) %>% select(-c(1:3)) -> gennaio_20_finale
+colnames(gennaio_20_finale)[2] <- "Decessi_Gennaio_20"
+
+#unisco per avere un unico dataframe con tutti i comuni e i decessi di gennaio 2020
+gennaio_totale <- rbind(gennaio_20_finale, gennaio_no2020_finale)
+#arrotondo 
+gennaio_totale['Decessi_Gennaio_20'] <- round(gennaio_totale['Decessi_Gennaio_20'])
+```
+
+
+
+
+
+```{r}
+#FEBBRAIO
+#Creiamo un'unica tabella per febbraio per i comuni di cui sono disponibili i dati del 2020 e calcoliamo il p value per vedere se vi è una differenza significativa tra la media dei decessi di febbraio dal 2015 al 2019 e i decessi di febbraio del 2020. Questo test ci permette di verificare se è possibile assegnare un valore uguale alla media dei decessi di febbraio 2020 per quei comuni per i quali non abbiamo i dati.
+joinFebbraio <- merge(x = febbraio, y = febbraio_20,  by="NOME_COMUNE")
+vector1 <-c()
+i<-1
+
+for (i in 1:nrow(joinFebbraio)){
+  p <- tryCatch( { t.test(joinFebbraio[i,2:6], mu =joinFebbraio[i,11])$p.value }, 
+                error = function(cond) { return(1) } ) 
+  vector1 <- append(vector1, p)
+}
+
+joinFebbraio['p-value'] <- vector1
+
+
+#Dividiamo i comuni che hanno pvalue >0.05 (0), da quelli che hanno p value < 0.05 e hanno avuto un decremento dei decessi rispetto alla media degli anni precedente (1) e da quelli che hanno un p value < 0.05 e hanno avuto un incremente dei decessi rispetto alla media degli anni precedenti (2)
+for(i in 1:nrow(joinFebbraio)){
+  if(joinFebbraio[i,12] >0.05){
+    joinFebbraio[i,'dummy'] = 0
+  }
+  else if (joinFebbraio[i,12] <0.05 & joinFebbraio[i,7] > joinFebbraio[i,11]){
+    joinFebbraio[i,'dummy'] = 1
+  }
+  else{
+    joinFebbraio[i,'dummy'] = 2
+  }
+}
+
+#Calcoliamo le probabilità con cui si manifestano le situazioni spiegate precedentemente
+pr0 <- length(which(joinFebbraio$dummy == 0))/nrow(joinFebbraio)
+pr1 <- length(which(joinFebbraio$dummy == 1))/nrow(joinFebbraio)
+pr2 <- length(which(joinFebbraio$dummy == 2))/nrow(joinFebbraio)
+
+
+
+#estraiamo i comuni che non abbiamo nel 2020
+febbraio_no2020 <- left_join(febbraio, febbraio_20, by="NOME_COMUNE")
+febbraio_no2020 %>% filter(is.na(ANNO)) -> febbraio_no2020
+
+
+
+#assegnamo ai comuni di cui non conosciamo i dati del 2020 con una probabilità uguale a quella calcolata prima, i valori 0,1,2 della variabile dummy
+randvar <- sample(c(0,1,2), size = nrow(febbraio_no2020), prob = c(pr0,pr1,pr2), replace = T)
+febbraio_no2020['prob'] <- randvar
+
+
+#creiamo due dataframe per estrarre il decremento e incremento medio calcolato sui 622 comuni di cui sono disponibili i dati
+joinFebbraio %>% filter(dummy==1) ->decrementi_febbraio
+joinFebbraio %>% filter(dummy==2) ->incrementi_febbraio
+
+decrementi_febbraio['differenza'] <- 1-(decrementi_febbraio$`sum(DECESSI)`/decrementi_febbraio["mediaDecessiFebbraio"]  )
+decremento_media <- mean(decrementi_febbraio$differenza)
+
+incrementi_febbraio['differenza'] <- (incrementi_febbraio$`sum(DECESSI)`/incrementi_febbraio["mediaDecessiFebbraio"]  )-1
+
+
+#togliamo un osservazione per non avere un risultato uguale a infinito
+incrementi_febbraio %>% filter(differenza!= Inf) -> incrementi_febbraio
+incremento_medio <- mean(incrementi_febbraio$differenza)
+
+
+#calcoliamo i decessi di Febbraio 2020 per i comuni di cui non abbiamo i dati. In base al valore della variabile dummy calcoliamo i decessi di febbraio 2020 incrementando o decrementando il valore rispetto alla media degli anni precedenti
+febbraio_no2020['Decessi_Febbraio_20'] <- apply(febbraio_no2020, 1, FUN = function(x) if(x["prob"] == 0)
+  as.numeric(x["mediaDecessiFebbraio"]) 
+  else if (x["prob"] == 1) as.numeric(x["mediaDecessiFebbraio"])- decremento_media* as.numeric(x["mediaDecessiFebbraio"])
+  else as.numeric(x["mediaDecessiFebbraio"]) +incremento_medio* as.numeric(x["mediaDecessiFebbraio"]))
+
+
+#Elimino, estraggo e rinonimo le colonne
+febbraio_no2020 %>% select(- c(2:12)) -> febbraio_no2020_finale
+as.data.frame(febbraio_20) %>% select(-c(1:3)) -> febbraio_20_finale
+colnames(febbraio_20_finale)[2] <- "Decessi_Febbraio_20"
+
+#Unisco per avere un unico dataframe con tutti i comuni e i decessi di febbraio 2020
+febbraio_totale <- rbind(febbraio_20_finale, febbraio_no2020_finale)
+febbraio_totale['Decessi_Febbraio_20'] <- round(febbraio_totale['Decessi_Febbraio_20'])
+```
+
+
+```{r}
+#MARZO
+#Estraiamo i decessi di Marzo 2020 per tutti i comuni della lombardia
+decessi_2020_completo %>% filter(ANNO == 20, NOME_REGIONE=="Lombardia", SESSO =="TOTALE", MESE=="03") ->decessi_2020_completo
+
+#Estraiamo i comuni il cui numero di decessi non è conosciuto
+decessi_marzo_9999<- dplyr::filter(decessi_2020_completo,DECESSI == 9999)
+#Estraiamo i comuni il cui numero di decessi è conosciuto
+decessi_marzo_2020<- dplyr::filter(decessi_2020_completo,DECESSI != 9999)
+
+
+#Facciamo la somma dei decessi per comune
+decessi_marzo_2020 %>% group_by(NOME_PROVINCIA,NOME_COMUNE) %>%
+  summarise(sum(DECESSI)) ->decessi_marzo_2020
+
+#Raggruppiamo per avere una riga per ogni comune
+decessi_marzo_9999 %>% group_by(NOME_COMUNE, NOME_PROVINCIA) %>%
+  summarise(mean(DECESSI)) -> decessi_marzo_9999
+decessi_marzo_9999 %>% select(-3) -> decessi_marzo_9999
+
+
+
+#Aggiungiamo la media degli anni precedenti per ogni comune i cui dati sono conosciuti e calcoliamo l'incremento % rispetto alla media nei mesi di Marzo degli anni precedenti
+mar <- merge(decessi_marzo_2020, marzo, by= "NOME_COMUNE")
+mar %>% select(-c(4:8)) -> mar
+mar['differenza'] = mar$`sum(DECESSI)`/mar$mediaDecessiMarzo -1
+
+#raggruppiamo per provincia i comuni di cui i dati sono disponibili e calcoliamo l'incremento medio rispetto al marzo degli anni precedenti
+mar %>% group_by(NOME_PROVINCIA) %>% summarise(mean(differenza)) -> mediaIncrementiMarzo
+#calcoliamo la dev standard degli incrementi dei comuni raggruppati per provincia
+mar %>% group_by(NOME_PROVINCIA) %>% summarise(sd(differenza)) -> sdIncrementiMarzo
+
+
+#L'idea è quella di assegnare una percentuale di incremento ai comuni di cui non abbiamo i dati disponibili in base alla
+#provincia di appartenenza. Basandoci sull'incremento medio che c'è stato nei comuni (sempre raggruppati per provincia) di cui abbiamo i dati disponibili, mappiamo gli incrementi medi
+#di ogni privincia sull'intervallo 0-20. Estraiamo quindi casualmente un incremento per ogni comune di cui non abbiamo i dati disponibili sulla base della provincia di appartenenza.
+
+
+
+incrementiBergamo <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Bergamo")), 19, 4.4)
+incrementiBrescia <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Brescia")), 9, 2)
+incrementiMilano <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Milano")), 4, 1.3)
+incrementiLodi <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Lodi")), 11.6, 2.6)
+incrementiCremona <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Cremona")), 10.8, 1.8)
+incrementiComo <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Como")), 2, 0.7)
+incrementiSondrio <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Sondrio")), 5.2, 1.8)
+incrementiVarese <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Varese")), 2.4, 0.9)
+incrementiPavia <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Pavia")), 7, 3)
+incrementiMantova <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Mantova")), 5, 1.6)
+incrementiMonza <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Monza e della Brianza")), 3.3, 0.7)
+incrementiLecco <- rnorm(length(which(decessi_marzo_9999$NOME_PROVINCIA=="Lecco")), 4.9, 1)
+
+#riordino in ordine alfabetico per provincia
+
+decessi_marzo_9999 %>% arrange(NOME_PROVINCIA) -> decessi_marzo_9999
+# creo un vettore unico degli incrementi 
+vettoreIncrementi <- c()
+vettoreIncrementi <- c(incrementiBergamo,incrementiBrescia, incrementiComo, incrementiCremona, incrementiLecco,incrementiLodi, incrementiMantova, incrementiMilano,incrementiMonza,incrementiPavia, incrementiSondrio, incrementiVarese)
+
+#aggiungiamo il vettore al dataframe in cui ci sono i comuni di cui non abbiamo i dati disponibili
+decessi_marzo_9999["incrementiPercentuale"] <- vettoreIncrementi
+
+
+ 
+#Effettuo una merge in modo da avere anche la media dei decessi
+#degli anni precedenti per i comuni di cui non sono disponibili
+#i dati del 2020
+decessi_marzo_9999_new <- merge(decessi_marzo_9999, marzo, by="NOME_COMUNE")
+decessi_marzo_9999_new %>% select(-c(4:8)) -> decessi_marzo_9999_new
+#calcolo i decessi di marzo 2020 incrementando la media dei decessi degli anni precedenti in base all'incremento
+#calcolato prima
+decessi_marzo_9999_new['Decessi_Marzo_20'] <- decessi_marzo_9999_new$mediaDecessiMarzo + ((decessi_marzo_9999_new$incrementiPercentuale * decessi_marzo_9999_new$mediaDecessiMarzo)/100)
+
+#arrotondiamo per eccesso
+decessi_marzo_9999_new['Decessi_Marzo_20'] <- ceiling(decessi_marzo_9999_new['Decessi_Marzo_20'])
+
+#Creo un dataframe in modo che posso successivamente effettuare un rbind
+decessi_marzo_9999_new %>% select(-c(3)) -> decessi_marzo_9999_new
+
+#Effettuo una merge in modo da avere anche la media dei decessi
+#degli anni precedenti per i comuni di cui sono disponibili
+#i dati del 2020
+decessi_marzo_2020_new <- merge(decessi_marzo_2020, marzo, by="NOME_COMUNE")
+#Creo un dataframe in modo che posso successivamente effettuare un rbind
+decessi_marzo_2020_new %>% select(-c(4:8)) -> decessi_marzo_2020_new
+
+colnames(decessi_marzo_2020_new)[3] <- "Decessi_Marzo_20"
+marzo_totale <- rbind(decessi_marzo_2020_new, decessi_marzo_9999_new)
+#creo colonna per avera i decessi covid nel mese di marzo per ogni comune
+marzo_totale['Decessi_Covid'] <- marzo_totale$Decessi_Marzo_20 - marzo_totale$medianaDecessiMarzo
+marzo_totale["Decessi_Covid"] <- ceiling(marzo_totale$Decessi_Covid)
+
+
+```
+
+
+```{r}
+#Calcolo decessi totali
+
+#Gennaio + Febbraio + Marzo 2020
+decessi_totali_trimestre_2020 <- sum(gennaio_totale$Decessi_Gennaio_20) + sum(febbraio_totale$Decessi_Febbraio_20)+ sum(marzo_totale$Decessi_Marzo_20)
+
+#Gennaio+ Febbraio + Marzo 2015
+decessi_totali_trimestre_2015 <- sum(gennaio_15$Decessi_Gennaio_15) + sum(febbraio_15$Decessi_Febbraio_15)+ sum(marzo_15$Decessi_Marzo_15)
+
+#Gennaio+ Febbraio + Marzo 2016
+decessi_totali_trimestre_2016 <- sum(gennaio_16$Decessi_Gennaio_16) + sum(febbraio_16$Decessi_Febbraio_16)+ sum(marzo_16$Decessi_Marzo_16)
+
+#Gennaio+ Febbraio + Marzo 2017
+decessi_totali_trimestre_2017 <- sum(gennaio_17$Decessi_Gennaio_17) + sum(febbraio_17$Decessi_Febbraio_17)+ sum(marzo_17$Decessi_Marzo_17)
+
+#Gennaio+ Febbraio + Marzo 2018
+decessi_totali_trimestre_2018 <- sum(gennaio_18$Decessi_Gennaio_18) + sum(febbraio_18$Decessi_Febbraio_18)+ sum(marzo_18$Decessi_Marzo_18)
+
+#Gennaio+ Febbraio + Marzo 2019
+decessi_totali_trimestre_2019 <- sum(gennaio_19$Decessi_Gennaio_19) + sum(febbraio_19$Decessi_Febbraio_19)+ sum(marzo_19$Decessi_Marzo_19)
+
+media_decessi_trimestre_1519 <- mean(c(decessi_totali_trimestre_2015,decessi_totali_trimestre_2016,decessi_totali_trimestre_2017,decessi_totali_trimestre_2018,decessi_totali_trimestre_2019))
+
+#Decessi per Covid 2020
+decessi_covid_2020 <- sum(marzo_totale$Decessi_Covid)
+
+
+```
+
+
+
